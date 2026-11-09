@@ -43,18 +43,30 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 
 // Messages from the slideshow: M = mute on/off (remembered), N = next piece,
 // 'ensure' = restart the music if Chrome closed it (it closes a silent offscreen page after 30 s).
+async function toggleMusic() {
+  const { muted } = await chrome.storage.local.get('muted');
+  await chrome.storage.local.set({ muted: !muted }); // the slideshow shows the new state
+  await startMusic(true);
+  chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'mute', muted: !muted }).catch(() => {});
+}
+
+async function nextPiece() {
+  await startMusic(true);
+  chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'next' }).catch(() => {});
+}
+
 chrome.runtime.onMessage.addListener((m, sender) => {
   if (!m?.music || !sender.tab) return;
-  (async () => {
-    const { muted } = await chrome.storage.local.get('muted');
-    if (m.music === 'ensure') { startMusic(); return; }
-    if (m.music === 'mute') {
-      await chrome.storage.local.set({ muted: !muted });
-      await startMusic(true);
-      chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'mute', muted: !muted }).catch(() => {});
-    } else if (m.music === 'next') {
-      await startMusic(true);
-      chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'next' }).catch(() => {});
-    }
-  })();
+  if (m.music === 'ensure') startMusic();
+  else if (m.music === 'mute') toggleMusic();
+  else if (m.music === 'next') nextPiece();
+});
+
+// Chrome-wide shortcuts (Alt+Shift+M / Alt+Shift+N), also when the slideshow window is not in front.
+// They can be changed, or made global to the whole Mac, at chrome://extensions/shortcuts.
+chrome.commands.onCommand.addListener(async (cmd) => {
+  const all = await chrome.storage.session.get(null);
+  if (!Object.keys(all).some((k) => k.startsWith('slideshow-tab-'))) return; // no slideshow open
+  if (cmd === 'toggle-music') toggleMusic();
+  else if (cmd === 'next-piece') nextPiece();
 });

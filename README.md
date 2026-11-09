@@ -1,5 +1,7 @@
 # Art Slideshow
 
+![Art Slideshow](icons/banner.png)
+
 A Chrome extension that plays the [Midjourney Explore](https://www.midjourney.com/explore?tab=top) page as a full-screen slideshow.
 
 - Each image stays on screen for 30 seconds. ↑ / ↓ change that by 1 second per tap.
@@ -35,9 +37,13 @@ Click the **Art Slideshow** icon in the toolbar. A full-screen window opens, the
 | ↑ / ↓ | 1 second slower / faster per tap (3 s to 600 s, remembered) |
 | M | Music on/off (remembered) |
 | N | Next music piece |
+| Alt+Shift+M | Music on/off from any Chrome window |
+| Alt+Shift+N | Next music piece from any Chrome window |
 | F | Page full screen on/off |
 
-A short label at the bottom shows the new time or the pause state, then fades out.
+A short label at the bottom shows the new time, the pause state or the music state, then fades out.
+
+Alt+Shift+M / Alt+Shift+N work while a slideshow window is open, even when another Chrome window is in front. Change them, or make them work in every app, at `chrome://extensions/shortcuts`.
 
 To stop, close the window (⌘W on Mac, Ctrl+W on Windows). The mouse pointer hides after 1.5 seconds without movement.
 
@@ -71,6 +77,7 @@ Reload the extension after changing them.
 
 - `background.js`: the toolbar click opens Explore in a full-screen popup window (no browser bars). Each time that window loads a midjourney.com page, the extension injects the slideshow into it. Other tabs are left alone. It also starts the music and stops it when the window closes.
 - `slideshow.js`: reads Explore's own feed (`/api/explore`) with your session, then covers the page with a black overlay that shows the full-size images, two layers crossfading.
+- `icons/`: the extension icon (`icon.svg`, rendered to PNG at 16–512 px) and the README banner.
 - `offscreen.html` / `offscreen.js`: a hidden extension page that plays `playlist.json`, so the music keeps going while Midjourney pages reload.
 
 If the feed fails three times in a row (for example, the session expired), the page reloads itself and the show restarts.

@@ -46,7 +46,14 @@
     <div class="stage idle"><img alt=""><img alt=""><div class="hud"></div></div>`;
   document.documentElement.appendChild(host);
   document.documentElement.style.overflow = 'hidden';
-  document.title = 'Explore';
+  document.title = 'Art Slideshow';
+  const setIcon = () => {
+    document.querySelectorAll('link[rel~="icon"]').forEach((l) => l.remove());
+    const l = document.createElement('link');
+    l.rel = 'icon'; l.href = chrome.runtime.getURL('icons/icon-32.png');
+    document.head?.appendChild(l);
+  };
+  setIcon(); setTimeout(setIcon, 3000); // the site may put its own back while it loads
   const stage = root.querySelector('.stage');
   const layers = [...root.querySelectorAll('img')];
   const hud = root.querySelector('.hud');
@@ -61,7 +68,17 @@
   // ---- feed ----
   let list = [], pos = -1, front = 0, timer = null, token = 0, fails = 0;
   let showMs = SHOW_MS, paused = false;
-  chrome.storage.local.get('showMs').then((v) => { if (v.showMs) showMs = v.showMs; }).catch(() => {});
+  let muted = false;
+  chrome.storage.local.get(['showMs', 'muted']).then((v) => {
+    if (v.showMs) showMs = v.showMs;
+    muted = !!v.muted;
+  }).catch(() => {});
+  // Music on/off can come from M here or from the Chrome-wide shortcut: show it either way.
+  chrome.storage.onChanged.addListener((c, area) => {
+    if (area !== 'local' || !c.muted) return;
+    muted = !!c.muted.newValue;
+    flash(muted ? '\u266A  Music off' : '\u266A  Music on');
+  });
 
   const imageUrl = (it) => `https://cdn.midjourney.com/${it.id}/0_${it.index}.webp`;
 
@@ -169,7 +186,7 @@
     else if (k === 'ArrowDown') setSpeed(-1000);
     else if (k === 'f' || k === 'F') document.fullscreenElement ? document.exitFullscreen() : fullscreen();
     else if (k === 'm' || k === 'M') music('mute');
-    else if (k === 'n' || k === 'N') music('next');
+    else if (k === 'n' || k === 'N') { music('next'); flash(muted ? '\u266A  Next piece \u00B7 music off' : '\u266A  Next piece'); }
     else return;
     e.preventDefault(); e.stopImmediatePropagation();
   }, true);
