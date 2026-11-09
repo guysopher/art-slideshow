@@ -3,10 +3,12 @@
 // Music plays from an offscreen page while a slideshow window is open.
 const START = 'https://www.midjourney.com/explore?tab=top';
 const key = (id) => 'slideshow-tab-' + id;
+// An unset preference is also muted; every new slideshow resets it below.
+const isMuted = async () => (await chrome.storage.local.get('muted')).muted !== false;
 
 async function startMusic(force) {
   if (await chrome.offscreen.hasDocument()) return;
-  const { muted } = await chrome.storage.local.get('muted');
+  const muted = await isMuted();
   if (muted && !force) return;
   await chrome.offscreen.createDocument({
     url: 'offscreen.html' + (muted ? '?muted' : ''),
@@ -21,6 +23,11 @@ async function stopMusicIfIdle() {
 }
 
 chrome.action.onClicked.addListener(async () => {
+  // A new show always starts silent, even if music was enabled in the last one.
+  await chrome.storage.local.set({ muted: true });
+  if (await chrome.offscreen.hasDocument()) {
+    await chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'mute', muted: true }).catch(() => {});
+  }
   const w = await chrome.windows.create({ url: START, type: 'popup', state: 'fullscreen' });
   await chrome.storage.session.set({ [key(w.tabs[0].id)]: true });
   chrome.windows.update(w.id, { state: 'fullscreen', focused: true }).catch(() => {}); // macOS sometimes ignores state on create
@@ -41,10 +48,10 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   stopMusicIfIdle();
 });
 
-// Messages from the slideshow: M = mute on/off (remembered), N = next piece,
+// Messages from the slideshow: M = mute on/off for this show, N = next piece,
 // 'ensure' = restart the music if Chrome closed it (it closes a silent offscreen page after 30 s).
 async function toggleMusic() {
-  const { muted } = await chrome.storage.local.get('muted');
+  const muted = await isMuted();
   await chrome.storage.local.set({ muted: !muted }); // the slideshow shows the new state
   await startMusic(true);
   chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'mute', muted: !muted }).catch(() => {});
