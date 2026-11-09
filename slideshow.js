@@ -5,7 +5,8 @@
   if (window.__mjSlideshow || /just a moment/i.test(document.title)) return;
   window.__mjSlideshow = true;
 
-  const SHOW_MS = 10_000;          // each image stays 10 s
+  const SHOW_MS = 30_000;          // default time per image; Up / Down change it by 1 s (remembered)
+  const MIN_MS = 3_000, MAX_MS = 600_000;
   const FADE_AUTO = 2.5;           // seconds, slow crossfade
   const FADE_MANUAL = 1;           // seconds, after an arrow / space / enter
   const FEED = 'top_month';        // what midjourney.com/explore shows by default
@@ -28,19 +29,39 @@
         user-select: none; -webkit-user-drag: none;
       }
       img.on { opacity: 1; }
+      .hud {
+        position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%);
+        padding: 10px 24px; border-radius: 999px; background: rgba(0,0,0,.55);
+        color: #fff; font: 600 26px/1.2 -apple-system, system-ui, sans-serif; letter-spacing: .02em;
+        opacity: 0; pointer-events: none; white-space: nowrap;
+      }
+      .hud.show { animation: hud 1.4s ease-out forwards; }
+      @keyframes hud {
+        0% { opacity: 0; transform: translateX(-50%) scale(.92); }
+        12% { opacity: 1; transform: translateX(-50%) scale(1); }
+        65% { opacity: 1; }
+        100% { opacity: 0; }
+      }
     </style>
-    <div class="stage idle"><img alt=""><img alt=""></div>`;
+    <div class="stage idle"><img alt=""><img alt=""><div class="hud"></div></div>`;
   document.documentElement.appendChild(host);
   document.documentElement.style.overflow = 'hidden';
   document.title = 'Explore';
   const stage = root.querySelector('.stage');
   const layers = [...root.querySelectorAll('img')];
+  const hud = root.querySelector('.hud');
+  function flash(text) {
+    hud.textContent = text;
+    hud.classList.remove('show'); void hud.offsetWidth; hud.classList.add('show');
+  }
 
   // Keep the site underneath quiet: no videos playing behind the overlay.
   setInterval(() => document.querySelectorAll('video').forEach((v) => { v.muted = true; v.pause(); }), 2000);
 
   // ---- feed ----
   let list = [], pos = -1, front = 0, timer = null, token = 0, fails = 0;
+  let showMs = SHOW_MS, paused = false;
+  chrome.storage.local.get('showMs').then((v) => { if (v.showMs) showMs = v.showMs; }).catch(() => {});
 
   const imageUrl = (it) => `https://cdn.midjourney.com/${it.id}/0_${it.index}.webp`;
 
@@ -111,16 +132,44 @@
     layers[front].classList.remove('on');
     front = 1 - front;
     preload(1); preload(2); preload(-1);
-    timer = setTimeout(() => go(1, false), SHOW_MS);
+    schedule();
+  }
+
+  function schedule() {
+    clearTimeout(timer); timer = null;
+    if (!paused) timer = setTimeout(() => go(1, false), showMs);
+  }
+
+  function setSpeed(deltaMs) {
+    showMs = Math.min(MAX_MS, Math.max(MIN_MS, showMs + deltaMs));
+    chrome.storage.local.set({ showMs }).catch(() => {});
+    if (pos >= 0) schedule(); // the current image now waits the new time
+    flash(`${showMs / 1000} s${paused ? ' \u00B7 paused' : ''}`);
+  }
+
+  function togglePause() {
+    paused = !paused;
+    if (pos >= 0) schedule();
+    flash(paused ? '\u275A\u275A  Paused' : `\u25B6  ${showMs / 1000} s`);
   }
 
   // ---- input ----
   const fullscreen = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); };
+  const music = (cmd) => chrome.runtime.sendMessage({ music: cmd }).catch(() => {});
+  setInterval(() => music('ensure'), 60_000);
+  // First key press also hides everything but the image (page full screen needs a key or click).
+  let firstKey = true;
   window.addEventListener('keydown', (e) => {
     const k = e.key;
-    if (k === 'ArrowRight' || k === ' ' || k === 'Enter') go(1, true);
+    if (firstKey && k !== 'f' && k !== 'F') { firstKey = false; fullscreen(); }
+    if (k === 'ArrowRight' || k === 'Enter') go(1, true);
     else if (k === 'ArrowLeft') go(-1, true);
+    else if (k === ' ') { if (!e.repeat) togglePause(); }
+    else if (k === 'ArrowUp') setSpeed(1000);
+    else if (k === 'ArrowDown') setSpeed(-1000);
     else if (k === 'f' || k === 'F') document.fullscreenElement ? document.exitFullscreen() : fullscreen();
+    else if (k === 'm' || k === 'M') music('mute');
+    else if (k === 'n' || k === 'N') music('next');
     else return;
     e.preventDefault(); e.stopImmediatePropagation();
   }, true);

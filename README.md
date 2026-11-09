@@ -2,7 +2,9 @@
 
 A Chrome extension that plays the [Midjourney Explore](https://www.midjourney.com/explore?tab=top) page as a full-screen slideshow.
 
-- Each image stays on screen for 10 seconds.
+- Each image stays on screen for 30 seconds. ↑ / ↓ change that by 1 second per tap.
+- Classical music plays in the background: about 24 hours of public-domain recordings, shuffled by work, looping.
+- The window opens full screen, with no tabs or address bar.
 - Images are never cropped. Empty space around them is pure black.
 - Images fade slowly into each other.
 - The show loops. It re-reads Explore every 10 minutes, so new images appear on their own.
@@ -23,13 +25,19 @@ You need midjourney.com to open normally in that Chrome. If Cloudflare shows a "
 
 ## Use
 
-Click the **Art Slideshow** icon in the toolbar. A full-screen window opens and the show starts.
+Click the **Art Slideshow** icon in the toolbar. A full-screen window opens, the show starts and the music fades in.
 
 | Key | Action |
 | --- | --- |
-| → , Space, Enter | Next image |
+| → , Enter | Next image |
 | ← | Previous image |
+| Space | Pause / play the slideshow |
+| ↑ / ↓ | 1 second slower / faster per tap (3 s to 600 s, remembered) |
+| M | Music on/off (remembered) |
+| N | Next music piece |
 | F | Page full screen on/off |
+
+A short label at the bottom shows the new time or the pause state, then fades out.
 
 To stop, close the window (⌘W on Mac, Ctrl+W on Windows). The mouse pointer hides after 1.5 seconds without movement.
 
@@ -37,25 +45,33 @@ To stop, close the window (⌘W on Mac, Ctrl+W on Windows). The mouse pointer hi
 
 After pulling new code, open `chrome://extensions` and click the reload arrow on the **Art Slideshow** card.
 
+## Music
+
+The music comes from [Musopen](https://musopen.org) recordings on archive.org ([MusopenCollectionAsFlac](https://archive.org/details/MusopenCollectionAsFlac), [musopen-chopin](https://archive.org/details/musopen-chopin)), all public domain. [`playlist.json`](playlist.json) lists 46 works (248 tracks): Beethoven, Mozart, Bach, Brahms, Tchaikovsky, Dvořák, Grieg, Chopin and more. Works play whole and in order; the order of works is shuffled each cycle. A track that fails to load is skipped.
+
 ## Settings
 
 The constants at the top of [`slideshow.js`](slideshow.js) control the show:
 
 | Constant | Default | Meaning |
 | --- | --- | --- |
-| `SHOW_MS` | `10000` | Time per image, in milliseconds |
+| `SHOW_MS` | `30000` | Default time per image, in milliseconds (↑ / ↓ override it) |
+| `MIN_MS` / `MAX_MS` | `3000` / `600000` | Limits for ↑ / ↓ |
 | `FADE_AUTO` | `2.5` | Fade length between images, in seconds |
 | `FADE_MANUAL` | `1` | Fade length after a key press, in seconds |
 | `FEED` | `top_month` | Explore feed to read (`top_month` is the default Explore tab) |
 | `PAGES` | `4` | Pages of 50 images to load (4 = up to 200 images) |
 | `REFRESH_MS` | `600000` | How often to re-read Explore, in milliseconds |
 
+In [`offscreen.js`](offscreen.js): `VOLUME` (`0.5`) and `FADE_MS` (`3000`, music fade in/out).
+
 Reload the extension after changing them.
 
 ## How it works
 
-- `background.js`: the toolbar click opens Explore in a full-screen window. Each time that window loads a midjourney.com page, the extension injects the slideshow into it. Other tabs are left alone.
+- `background.js`: the toolbar click opens Explore in a full-screen popup window (no browser bars). Each time that window loads a midjourney.com page, the extension injects the slideshow into it. Other tabs are left alone. It also starts the music and stops it when the window closes.
 - `slideshow.js`: reads Explore's own feed (`/api/explore`) with your session, then covers the page with a black overlay that shows the full-size images, two layers crossfading.
+- `offscreen.html` / `offscreen.js`: a hidden extension page that plays `playlist.json`, so the music keeps going while Midjourney pages reload.
 
 If the feed fails three times in a row (for example, the session expired), the page reloads itself and the show restarts.
 
