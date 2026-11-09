@@ -68,10 +68,10 @@
   // ---- feed ----
   let list = [], pos = -1, front = 0, timer = null, token = 0, fails = 0;
   let showMs = SHOW_MS, paused = false;
-  let muted = false;
+  let muted = true;
   chrome.storage.local.get(['showMs', 'muted']).then((v) => {
     if (v.showMs) showMs = v.showMs;
-    muted = !!v.muted;
+    muted = v.muted !== false;
   }).catch(() => {});
   // Music on/off can come from M here or from the Chrome-wide shortcut: show it either way.
   chrome.storage.onChanged.addListener((c, area) => {
