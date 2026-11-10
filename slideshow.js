@@ -11,6 +11,8 @@
   const FADE_MANUAL = 1;           // seconds, after an arrow / space / enter
   const FEED = 'top_month';        // what midjourney.com/explore shows by default
   const PAGES = 4;                 // 50 jobs per page
+  const GALLERIES = true;          // also show each Explore creator's public gallery (about 3x more images)
+  const GALLERY_PARALLEL = 8;      // galleries read at the same time
   const REFRESH_MS = 10 * 60_000;  // re-read the feed every 10 min
 
   // ---- overlay (shadow DOM so the site's CSS cannot touch it) ----
@@ -82,42 +84,78 @@
 
   const imageUrl = (it) => `https://cdn.midjourney.com/${it.id}/0_${it.index}.webp`;
 
+  const item = (id, index) => ({ key: `${id}_${index}`, id, index });
+  const api = (path) => fetch(path, { headers: { 'x-csrf-protection': '1' }, credentials: 'include', cache: 'no-store' });
+
   function toItems(jobs) {
     const out = [];
     for (const j of jobs) {
       if (!j?.id || j.type !== 'image') continue;
       const index = (j.items || []).findIndex((x) => x && x.server_filtered === false);
       if (index < 0) continue;
-      out.push({ key: `${j.id}_${index}`, id: j.id, index });
+      out.push({ ...item(j.id, index), user: j.username_v2 });
     }
     return out;
   }
 
-  async function readFeed() {
+  async function readExplore() {
     const all = [];
     for (let p = 0; p < PAGES; p++) {
-      const r = await fetch(`/api/explore?page=${p}&feed=${FEED}&_ql=explore`, {
-        headers: { 'x-csrf-protection': '1' }, credentials: 'include', cache: 'no-store',
-      });
+      const r = await api(`/api/explore?page=${p}&feed=${FEED}&_ql=explore`);
       if (!r.ok) throw new Error('feed ' + r.status);
       const jobs = await r.json();
       if (!Array.isArray(jobs) || !jobs.length) break;
       all.push(...toItems(jobs));
     }
-    const seen = new Set();
-    return all.filter((x) => !seen.has(x.key) && seen.add(x.key));
+    return all;
   }
 
+  // One creator's public gallery (their profile page): up to 50 images, videos left out.
+  // "Virtual" upscales have no file of their own; their parent image is the same picture.
+  async function readGallery(user) {
+    try {
+      const r = await api(`/api/spotlight-feed?username_v2=${encodeURIComponent(user)}`);
+      const jobs = r.ok ? await r.json() : [];
+      return (Array.isArray(jobs) ? jobs : [])
+        .filter((j) => j?.id && !j.video_segments && j.published !== false && j.event_type !== 'uploaded')
+        .map((j) => /_virtual/.test(j.event_type) && j.parent_id
+          ? item(j.parent_id, j.parent_grid ?? 0)
+          : item(j.id, j.grid_index ?? 0));
+    } catch { return []; }
+  }
+
+  // Galleries of every creator on Explore, a few at a time, mixed creator by creator.
+  async function readGalleries(explore) {
+    const users = [...new Set(explore.map((x) => x.user).filter(Boolean))];
+    const lists = [];
+    for (let i = 0; i < users.length; i += GALLERY_PARALLEL) {
+      lists.push(...await Promise.all(users.slice(i, i + GALLERY_PARALLEL).map(readGallery)));
+    }
+    const out = [];
+    for (let k = 0; lists.some((l) => k < l.length); k++) lists.forEach((l) => l[k] && out.push(l[k]));
+    return out;
+  }
+
+  const dedupe = (a) => { const seen = new Set(); return a.filter((x) => !seen.has(x.key) && seen.add(x.key)); };
+
+  function setList(fresh) {
+    const curKey = list[pos]?.key;
+    list = dedupe(fresh);
+    const i = list.findIndex((x) => x.key === curKey);
+    pos = i >= 0 ? i : Math.min(pos, list.length - 1);
+    if (!timer && token === 0) go(1, false);
+  }
+
+  let galleries = [];
   async function refresh() {
     try {
-      const fresh = await readFeed();
+      const explore = await readExplore();
       fails = 0;
-      if (!fresh.length) return;
-      const curKey = list[pos]?.key;
-      list = fresh;
-      const i = list.findIndex((x) => x.key === curKey);
-      pos = i >= 0 ? i : Math.min(pos, list.length - 1);
-      if (!timer && token === 0) go(1, false);
+      if (!explore.length) return;
+      setList([...explore, ...galleries]); // the show starts on Explore right away
+      if (!GALLERIES) return;
+      galleries = await readGalleries(explore);
+      setList([...explore, ...galleries]);
     } catch {
       // Session expired or network hiccup: retry soon; after 3 misses reload the page
       // (the browser renews its Midjourney session, the slideshow restarts itself).
