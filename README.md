@@ -9,7 +9,8 @@ A Chrome extension that plays the [Midjourney Explore](https://www.midjourney.co
 - The window opens full screen, with no tabs or address bar.
 - Images are never cropped. Empty space around them is pure black.
 - Images fade slowly into each other.
-- The show loops. It re-reads Explore every 10 minutes, so new images appear on their own.
+- About 650 images: the 200 on Explore, plus the public gallery of every creator on Explore (their profile page). Explore images play first, then the galleries, mixed creator by creator. Videos are left out.
+- The show loops. It re-reads Explore and the galleries every 10 minutes, so new images appear on their own.
 
 ## Why it is an extension
 
@@ -66,7 +67,9 @@ The constants at the top of [`slideshow.js`](slideshow.js) control the show:
 | `FADE_AUTO` | `2.5` | Fade length between images, in seconds |
 | `FADE_MANUAL` | `1` | Fade length after a key press, in seconds |
 | `FEED` | `top_month` | Explore feed to read (`top_month` is the default Explore tab) |
-| `PAGES` | `4` | Pages of 50 images to load (4 = up to 200 images) |
+| `PAGES` | `4` | Pages of 50 images to load (4 = up to 200 images; Midjourney shows no more without a login) |
+| `GALLERIES` | `true` | Also show each Explore creator's public gallery (up to 50 images each) |
+| `GALLERY_PARALLEL` | `8` | Galleries read at the same time |
 | `REFRESH_MS` | `600000` | How often to re-read Explore, in milliseconds |
 
 In [`offscreen.js`](offscreen.js): `VOLUME` (`0.5`) and `FADE_MS` (`3000`, music fade in/out).
@@ -76,7 +79,7 @@ Reload the extension after changing them.
 ## How it works
 
 - `background.js`: the toolbar click opens Explore in a full-screen popup window (no browser bars). Each time that window loads a midjourney.com page, the extension injects the slideshow into it. Other tabs are left alone. It also starts the music and stops it when the window closes.
-- `slideshow.js`: reads Explore's own feed (`/api/explore`) with your session, then covers the page with a black overlay that shows the full-size images, two layers crossfading.
+- `slideshow.js`: reads Explore's own feed (`/api/explore`) and each Explore creator's gallery (`/api/spotlight-feed`) with your session, then covers the page with a black overlay that shows the full-size images, two layers crossfading.
 - `icons/`: the extension icon (`icon.svg`, rendered to PNG at 16–512 px) and the README banner.
 - `offscreen.html` / `offscreen.js`: a hidden extension page that plays `playlist.json`, so the music keeps going while Midjourney pages reload.
 
