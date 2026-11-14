@@ -5,12 +5,14 @@
 A Chrome extension that plays the [Midjourney Explore](https://www.midjourney.com/explore?tab=top) page as a full-screen slideshow.
 
 - Each image stays on screen for 30 seconds. ↑ / ↓ change that by 1 second per tap.
-- Optional classical music: about 24 hours of public-domain recordings, shuffled by work, looping. Music is off by default; press M to turn it on.
+- Videos play muted and loop. Each one plays through at least once, even when it is longer than the set time.
+- Classical music plays in the background: about 24 hours of public-domain recordings, shuffled by work, looping.
 - The window opens full screen, with no tabs or address bar.
-- Images are never cropped. Empty space around them is pure black.
-- Images fade slowly into each other.
-- About 650 images: the 200 on Explore, plus the public gallery of every creator on Explore (their profile page). Explore images play first, then the galleries, mixed creator by creator. Videos are left out.
-- The show loops. It re-reads Explore and the galleries every 10 minutes, so new images appear on their own.
+- Images and videos are never cropped. Empty space around them is pure black.
+- Items fade slowly into each other.
+- About 1400 items, images and videos: the 200 images and 200 videos on Explore, plus the public gallery of every creator on Explore (their profile page).
+- The order is random, and reshuffled after each full round.
+- The show loops. It re-reads Explore and the galleries every 10 minutes, so new items appear on their own.
 
 ## Why it is an extension
 
@@ -32,8 +34,8 @@ Click the **Art Slideshow** icon in the toolbar. A full-screen window opens and 
 
 | Key | Action |
 | --- | --- |
-| → , Enter | Next image |
-| ← | Previous image |
+| → , Enter | Next item |
+| ← | Previous item |
 | Space | Pause / play the slideshow |
 | ↑ / ↓ | 1 second slower / faster per tap (3 s to 600 s, remembered) |
 | M | Music on/off for this show (off again on the next launch) |
@@ -62,13 +64,14 @@ The constants at the top of [`slideshow.js`](slideshow.js) control the show:
 
 | Constant | Default | Meaning |
 | --- | --- | --- |
-| `SHOW_MS` | `30000` | Default time per image, in milliseconds (↑ / ↓ override it) |
+| `SHOW_MS` | `30000` | Default time per item, in milliseconds (↑ / ↓ override it) |
 | `MIN_MS` / `MAX_MS` | `3000` / `600000` | Limits for ↑ / ↓ |
-| `FADE_AUTO` | `2.5` | Fade length between images, in seconds |
+| `FADE_AUTO` | `2.5` | Fade length between items, in seconds |
 | `FADE_MANUAL` | `1` | Fade length after a key press, in seconds |
-| `FEED` | `top_month` | Explore feed to read (`top_month` is the default Explore tab) |
-| `PAGES` | `4` | Pages of 50 images to load (4 = up to 200 images; Midjourney shows no more without a login) |
-| `GALLERIES` | `true` | Also show each Explore creator's public gallery (up to 50 images each) |
+| `FEEDS` | `top_month`, `video_top_month` | Explore feeds to read (the Images and Videos tabs) |
+| `VIDEOS` | `true` | Include videos |
+| `PAGES` | `4` | Pages of 50 to load per feed (4 = up to 200; Midjourney shows no more without a login) |
+| `GALLERIES` | `true` | Also show each Explore creator's public gallery (up to 50 items each) |
 | `GALLERY_PARALLEL` | `8` | Galleries read at the same time |
 | `REFRESH_MS` | `600000` | How often to re-read Explore, in milliseconds |
 
