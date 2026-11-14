@@ -30,7 +30,7 @@ You need midjourney.com to open normally in that Chrome. If Cloudflare shows a "
 
 ## Use
 
-Click the **Art Slideshow** icon in the toolbar. A full-screen window opens, the show starts and the music fades in.
+Click the **Art Slideshow** icon in the toolbar. A full-screen window opens and the show starts with music off. Press M to turn it on.
 
 | Key | Action |
 | --- | --- |
@@ -38,7 +38,7 @@ Click the **Art Slideshow** icon in the toolbar. A full-screen window opens, the
 | ← | Previous item |
 | Space | Pause / play the slideshow |
 | ↑ / ↓ | 1 second slower / faster per tap (3 s to 600 s, remembered) |
-| M | Music on/off (remembered) |
+| M | Music on/off for this show (off again on the next launch) |
 | N | Next music piece |
 | Alt+Shift+M | Music on/off from any Chrome window |
 | Alt+Shift+N | Next music piece from any Chrome window |
@@ -81,8 +81,8 @@ Reload the extension after changing them.
 
 ## How it works
 
-- `background.js`: the toolbar click opens Explore in a full-screen popup window (no browser bars). Each time that window loads a midjourney.com page, the extension injects the slideshow into it. Other tabs are left alone. It also starts the music and stops it when the window closes.
-- `slideshow.js`: reads Explore's own feed (`/api/explore`) and each Explore creator's gallery (`/api/spotlight-feed`) with your session, then covers the page with a black overlay that shows the full-size images and videos, two layers crossfading.
+- `background.js`: the toolbar click opens Explore in a full-screen popup window (no browser bars). Each time that window loads a midjourney.com page, the extension injects the slideshow into it. Other tabs are left alone. Music starts only when turned on and stops when the window closes.
+- `slideshow.js`: reads Explore's own feed (`/api/explore`) and each Explore creator's gallery (`/api/spotlight-feed`) with your session, then covers the page with a black overlay that shows the full-size images, two layers crossfading.
 - `icons/`: the extension icon (`icon.svg`, rendered to PNG at 16–512 px) and the README banner.
 - `offscreen.html` / `offscreen.js`: a hidden extension page that plays `playlist.json`, so the music keeps going while Midjourney pages reload.
 
