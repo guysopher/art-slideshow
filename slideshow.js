@@ -75,17 +75,7 @@
   // ---- feed ----
   let list = [], pos = -1, front = 0, timer = null, token = 0, fails = 0;
   let showMs = SHOW_MS, paused = false;
-  let muted = false;
-  chrome.storage.local.get(['showMs', 'muted']).then((v) => {
-    if (v.showMs) showMs = v.showMs;
-    muted = !!v.muted;
-  }).catch(() => {});
-  // Music on/off can come from M here or from the Chrome-wide shortcut: show it either way.
-  chrome.storage.onChanged.addListener((c, area) => {
-    if (area !== 'local' || !c.muted) return;
-    muted = !!c.muted.newValue;
-    flash(muted ? '\u266A  Music off' : '\u266A  Music on');
-  });
+  chrome.storage.local.get('showMs').then((v) => { if (v.showMs) showMs = v.showMs; }).catch(() => {});
 
   const url = (it) => it.video
     ? `https://cdn.midjourney.com/video/${it.id}/${it.index}.mp4`
@@ -257,8 +247,6 @@
 
   // ---- input ----
   const fullscreen = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); };
-  const music = (cmd) => chrome.runtime.sendMessage({ music: cmd }).catch(() => {});
-  setInterval(() => music('ensure'), 60_000);
   // First key press also hides everything but the image (page full screen needs a key or click).
   let firstKey = true;
   window.addEventListener('keydown', (e) => {
@@ -270,8 +258,6 @@
     else if (k === 'ArrowUp') setSpeed(1000);
     else if (k === 'ArrowDown') setSpeed(-1000);
     else if (k === 'f' || k === 'F') document.fullscreenElement ? document.exitFullscreen() : fullscreen();
-    else if (k === 'm' || k === 'M') music('mute');
-    else if (k === 'n' || k === 'N') { music('next'); flash(muted ? '\u266A  Next piece \u00B7 music off' : '\u266A  Next piece'); }
     else return;
     e.preventDefault(); e.stopImmediatePropagation();
   }, true);
